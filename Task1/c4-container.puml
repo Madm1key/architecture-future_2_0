@@ -7,7 +7,7 @@ Person(analyst, "Аналитик", "Построение отчетов")
 Person(owner, "Data Product Owner", "Отвечает за дата-продукты домена")
 
 System_Boundary(ss, "Портал самообслуживания (Self-Service Analytics)") {
-    Container(portal, "Витрина данных", "Dremio", "Каталог данных")
+    Container(portal, "Портал аналитики", "Dremio", "SQL-движок, точка доступа к дата-продуктам")
 }
 
 System_Boundary(lake, "Облачная платформа данных (Lakehouse)") {
@@ -41,8 +41,9 @@ Rel(analyst, portal, "Запрашивает и конструирует отч�
 Rel(owner, portal, "Описывает дата-продукты", "HTTPS")
 
 Rel(portal, nessie, "Разрешает версии таблиц (ветка main)")
-Rel(portal, storage, "Читает аналитические данные (только разрешённые)")
+Rel(portal, storage, "Физическое чтение Parquet/Iceberg-файлов (только разрешённые)")
 Rel(portal, iam, "Аутентификация / авторизация", "OIDC")
+Rel(nessie, iam, "Авторизация доступа к namespace", "OIDC")
 
 Rel(ingest, storage, "Сырые файлы данных")
 Rel(ingest, nessie, "Коммит в ветку")
@@ -51,13 +52,14 @@ Rel(process, nessie, "ELT на ветках, merge в main")
 Rel(nessie, storage, "Снимки/метаданные таблиц")
 
 Rel(fintech, kafka, "События")
+Rel(kafka, ai, "Входящие события / задания")
 Rel(ai, kafka, "Результаты ИИ-аналитики")
 Rel(future, kafka, "Дата-продукты")
-Rel(clinical, kafka, "События")
+Rel(clinical, kafka, "Агрегированные/анонимизированные события (без PHI)")
 Rel(kafka, ingest, "Подписка, загрузка в Lakehouse")
 
-Rel(clinical, clinicaldb, "")
-Rel(fintech, fintechdb, "")
+Rel(clinical, clinicaldb, "SQL / CRUD")
+Rel(fintech, fintechdb, "SQL / CRUD")
 Rel(ai, clinicaldb, "Доступ к медданным в контуре домена")
 
 Rel(dwh, ingest, "Историческая загрузка (CDC / one-off)")
