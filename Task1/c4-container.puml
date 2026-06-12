@@ -1,0 +1,69 @@
+@startuml c4-container
+!include <C4/C4_Container>
+
+title «Будущее 2.0» диаграмма контейнеров
+
+Person(analyst, "Аналитик", "Построение отчетов")
+Person(owner, "Data Product Owner", "Отвечает за дата-продукты домена")
+
+System_Boundary(ss, "Портал самообслуживания (Self-Service Analytics)") {
+    Container(portal, "Портал аналитики", "Dremio", "SQL-движок, точка доступа к дата-продуктам")
+}
+
+System_Boundary(lake, "Облачная платформа данных (Lakehouse)") {
+    Container(ingest, "Слой загрузки", "CDC", "Потоковая и пакетная загрузка")
+    Container(nessie, "Каталог таблиц Nessie", "Project Nessie", "Git-подобный транзакционный каталог: ветки, теги, коммиты")
+    ContainerDb(storage, "Объектное хранилище", "S3", "Файлы данных (многоуровневое хранение)")
+    Container(process, "Обработка и трансформации", "Spark / dbt", "ELT, подготовка дата-продуктов")
+}
+
+System_Boundary(bus, "Интеграционный слой") {
+    Container(kafka, "Event Streaming Platform", "Apache Kafka", "Транспорт: брокер событий, домены публикуют и подписываются на события")
+    Container(integration, "ESB", "Apache Camel", "Маршрутизация, трансформации, ФЛК")
+}
+
+System_Boundary(domains, "Операционные домены (развиваются независимо)") {
+    Container(clinical, "Медицинский домен", "Мед. сервис", "Мед. карты, истории болезни — НЕ в аналитику")
+    ContainerDb(clinicaldb, "Хранилище медданных", "PostgreSQL", "")
+    Container(fintech, "Финтех / Банковский домен", "Go / Java", "Счета, кредиты, транзакции")
+    ContainerDb(fintechdb, "Хранилище финтех-домена", "PostgreSQL", "")
+    Container(ai, "ИИ-домен", "ML-сервисы, Python", "Диагностика, аналитика медданных")
+}
+
+Container(iam, "IAM / SSO", "Keycloak / OIDC", "RBAC, уровни доступа")
+
+System_Boundary(legacy, "Легаси (поэтапный вывод)") {
+    ContainerDb(dwh, "Legacy DWH", "MS SQL Server 2008", "Бизнес-логика мигрирует в домены")
+}
+
+Rel(analyst, portal, "Запрашивает и конструирует отчёты", "HTTPS")
+Rel(owner, portal, "Описывает дата-продукты", "HTTPS")
+
+Rel(portal, nessie, "Разрешает версии таблиц (ветка main)")
+Rel(portal, storage, "Физическое чтение Parquet/Iceberg-файлов (только разрешённые)")
+Rel(portal, iam, "Аутентификация / авторизация", "OIDC")
+Rel(nessie, iam, "Авторизация доступа к namespace", "OIDC")
+
+Rel(ingest, storage, "Сырые файлы данных")
+Rel(ingest, nessie, "Коммит в ветку")
+Rel(process, storage, "Обработанные файлы данных")
+Rel(process, nessie, "ELT на ветках, merge в main")
+Rel(nessie, storage, "Снимки/метаданные таблиц")
+
+Rel(fintech, integration, "Исходящие запросы")
+Rel(clinical, integration, "Исходящие запросы")
+Rel(integration, kafka, "Нормализованные события")
+Rel(integration, fintech, "Входящие запросы")
+Rel(integration, clinical, "Входящие запросы")
+
+Rel(kafka, ai, "Входящие события / задания")
+Rel(ai, kafka, "Результаты ИИ-аналитики")
+Rel(kafka, ingest, "Подписка, загрузка в Lakehouse")
+
+Rel(clinical, clinicaldb, "SQL / CRUD")
+Rel(fintech, fintechdb, "SQL / CRUD")
+Rel(ai, clinicaldb, "Доступ к медданным в контуре домена")
+
+Rel(dwh, ingest, "Историческая загрузка (CDC / one-off)")
+
+@enduml

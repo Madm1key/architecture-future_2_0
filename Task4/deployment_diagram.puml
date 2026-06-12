@@ -1,0 +1,53 @@
+@startuml deployment_diagram
+
+title Диаграмма автоматизации развёртывания — «Будущее 2.0»
+
+legend right
+  |= Цвет              |= Описание              |
+  |<#90EE90> зелёный   | Управляется Terraform  |
+  |<#FFD700> жёлтый    | Ручной деплой          |
+  |<#FFB6C1> розовый   | Legacy / On-Premise    |
+endlegend
+
+cloud "Облачная инфраструктура" {
+
+  rectangle "Аналитика" {
+    component [Dremio\n<i>Terraform</i>] #90EE90
+    component [Spark / dbt ETL\n<i>Terraform</i>] #90EE90
+    component [Nessie Catalog\n<i>Terraform</i>] #90EE90
+    component [Object Storage (S3)\n<i>Terraform</i>] #90EE90
+    component [Dremio: источники и пространства\n<i>Ручная конфигурация</i>] #FFD700
+    component [dbt-модели\n<i>CI/CD деплой</i>] #FFD700
+    component [Nessie: репозитории и ветки\n<i>Ручная инициализация</i>] #FFD700
+  }
+
+  rectangle "Event Streaming" {
+    component [Kafka Broker × 3\n<i>Terraform</i>] #90EE90
+    component [Kafka: топики и ACL\n<i>Ручная конфигурация</i>] #FFD700
+  }
+
+  rectangle "IAM / SSO" {
+    component [Keycloak VM + PostgreSQL\n<i>Terraform</i>] #90EE90
+    component [Realm, роли, клиенты\n<i>Ручная конфигурация</i>] #FFD700
+  }
+
+  rectangle "Медицинский домен" {
+    component [Medical App VM + PostgreSQL\n<i>Terraform</i>] #90EE90
+    component [AI Services VM (GPU)\n<i>Terraform</i>] #90EE90
+    component [Medical-приложения\n<i>CI/CD деплой</i>] #FFD700
+    component [AI-модели (Python)\n<i>Ручной деплой</i>] #FFD700
+  }
+
+  rectangle "Финтех домен" {
+    component [Fintech API VM + PostgreSQL\n<i>Terraform</i>] #90EE90
+    component [Fintech-сервисы (Go / Java)\n<i>CI/CD деплой</i>] #FFD700
+  }
+}
+
+rectangle "On-Premise — Legacy (поэтапный вывод)" #FFB6C1 {
+  component [DWH SQL Server 2008] #FFB6C1
+  component [PowerBuilder UI] #FFB6C1
+  component [ESB Apache Camel] #FFB6C1
+}
+
+@enduml

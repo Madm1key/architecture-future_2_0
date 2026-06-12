@@ -1,0 +1,56 @@
+@startuml dfd-target
+
+skinparam actor {
+    BackgroundColor #08427B
+    FontColor white
+    BorderColor #062a4f
+}
+title «Будущее 2.0» — целевая DFD (TO-BE)
+
+actor "Оператор клиники" as clinician
+actor "Клиент" as client
+actor "Аналитик" as analyst
+
+package "Операционные домены" {
+    rectangle "Медицинский домен" as clinical
+    rectangle "ИИ-домен" as ai
+    rectangle "Финтех / Банк" as fintech
+}
+
+package "Платформенный домен" {
+    rectangle "Kafka\n(событийная шина)" as kafka #FFE0A0
+    rectangle "Lakehouse" as lake #FFE0A0
+}
+
+package "Потребительские домены" {
+    rectangle "Портал аналитики\n(self-service)" as portal
+}
+
+rectangle "IAM / SSO\n(RBAC)" as iam
+
+' Ввод данных
+clinician --> clinical : "Медданные"
+client --> clinical : "Запись на приём"
+client --> fintech : "Платежи, заявки"
+analyst --> portal : "Запрос отчёта"
+
+' ИИ-сценарий
+clinical --> ai : "Доступ к PHI в контуре"
+ai --> clinical : "Диагноз врачу"
+
+' Публикация событий в шину
+clinical --> kafka : "Обезличенные события"
+ai --> kafka : "Обезличенные метрики"
+fintech --> kafka : "Транзакции, кредиты"
+
+' Платформа
+kafka --> lake : "Загрузка, ELT"
+
+' Потребление
+lake --> portal : "Данные"
+
+' IAM
+portal --> iam : "Аутентификация OIDC"
+iam ..> lake : "Проверка прав"
+
+@enduml
