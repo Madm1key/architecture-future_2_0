@@ -17,8 +17,9 @@ System_Boundary(lake, "Облачная платформа данных (Lakehou
     Container(process, "Обработка и трансформации", "Spark / dbt", "ELT, подготовка дата-продуктов")
 }
 
-System_Boundary(bus, "Событийная интеграция") {
-    Container(kafka, "Event Streaming Platform", "Apache Kafka", "Домены публикуют события")
+System_Boundary(bus, "Интеграционный слой") {
+    Container(kafka, "Event Streaming Platform", "Apache Kafka", "Транспорт: брокер событий, домены публикуют и подписываются на события")
+    Container(integration, "ESB", "Apache Camel", "Маршрутизация, трансформации, ФЛК")
 }
 
 System_Boundary(domains, "Операционные домены (развиваются независимо)") {
@@ -27,14 +28,12 @@ System_Boundary(domains, "Операционные домены (развива�
     Container(fintech, "Финтех / Банковский домен", "Go / Java", "Счета, кредиты, транзакции")
     ContainerDb(fintechdb, "Хранилище финтех-домена", "PostgreSQL", "")
     Container(ai, "ИИ-домен", "ML-сервисы, Python", "Диагностика, аналитика медданных")
-    Container(future, "Будущие домены", "", "Фарма, электроника (партнёры)")
 }
 
 Container(iam, "IAM / SSO", "Keycloak / OIDC", "RBAC, уровни доступа")
 
 System_Boundary(legacy, "Легаси (поэтапный вывод)") {
     ContainerDb(dwh, "Legacy DWH", "MS SQL Server 2008", "Бизнес-логика мигрирует в домены")
-    Container(esb, "Legacy ESB", "Apache Camel", "Заменяется на Kafka")
 }
 
 Rel(analyst, portal, "Запрашивает и конструирует отчёты", "HTTPS")
@@ -51,11 +50,14 @@ Rel(process, storage, "Обработанные файлы данных")
 Rel(process, nessie, "ELT на ветках, merge в main")
 Rel(nessie, storage, "Снимки/метаданные таблиц")
 
-Rel(fintech, kafka, "События")
+Rel(fintech, integration, "Исходящие запросы")
+Rel(clinical, integration, "Исходящие запросы")
+Rel(integration, kafka, "Нормализованные события")
+Rel(integration, fintech, "Входящие запросы")
+Rel(integration, clinical, "Входящие запросы")
+
 Rel(kafka, ai, "Входящие события / задания")
 Rel(ai, kafka, "Результаты ИИ-аналитики")
-Rel(future, kafka, "Дата-продукты")
-Rel(clinical, kafka, "Агрегированные/анонимизированные события (без PHI)")
 Rel(kafka, ingest, "Подписка, загрузка в Lakehouse")
 
 Rel(clinical, clinicaldb, "SQL / CRUD")
@@ -63,6 +65,5 @@ Rel(fintech, fintechdb, "SQL / CRUD")
 Rel(ai, clinicaldb, "Доступ к медданным в контуре домена")
 
 Rel(dwh, ingest, "Историческая загрузка (CDC / one-off)")
-Rel(esb, kafka, "Strangler: трафик переводится на Kafka")
 
 @enduml
